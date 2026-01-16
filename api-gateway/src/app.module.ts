@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
-import { OrderModule } from './order/order.module';
-import { PaymentModule } from './payment/payment.module';
+import { HttpModule } from '@nestjs/axios';
+import { AuthController } from './auth/auth.controller';
+import { AuthClient } from './auth/auth.service';
+import { JwtGuard } from './guards/jwt.guard';
 
 @Module({
-  imports: [AuthModule, OrderModule, PaymentModule],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [HttpModule],
+  controllers: [AuthController],
+  providers: [AuthClient, JwtGuard],
 })
-export class AppModule {}
+export class ApiGatewayModule {}
+

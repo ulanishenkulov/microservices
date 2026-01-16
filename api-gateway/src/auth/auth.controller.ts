@@ -1,34 +1,33 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { AuthClient } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authClient: AuthClient) {}
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  @Post('register')
+  async register(@Body() dto: any) {
+    try {
+      return await this.authClient.register(dto);
+    } catch (err: any) {
+      if (err.response?.data) {
+        throw new HttpException(err.response.data, err.response.status);
+      }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+  @Post('login')
+  async login(@Body() dto: any) {
+    try {
+      return await this.authClient.login(dto);
+    } catch (err: any) {
+      if (err.response?.data) {
+        throw new HttpException(err.response.data, err.response.status);
+      }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }
+
+
