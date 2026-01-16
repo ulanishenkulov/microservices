@@ -1,12 +1,14 @@
 import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
 import { AuthClient } from './auth.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authClient: AuthClient) {}
 
   @Post('register')
-  async register(@Body() dto: any) {
+  async register(@Body() dto: RegisterDto) {
     try {
       return await this.authClient.register(dto);
     } catch (err: any) {
@@ -18,7 +20,7 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() dto: any) {
+  async login(@Body() dto: LoginDto) {
     try {
       return await this.authClient.login(dto);
     } catch (err: any) {
@@ -29,5 +31,3 @@ export class AuthController {
     }
   }
 }
-
-
