@@ -1,26 +1,31 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import axios from 'axios';
 
 @Injectable()
-export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+export class AuthClient {
+  private readonly authUrl: string;
+  constructor(private readonly http: HttpService,
+              private readonly configService: ConfigService,
+) {
+    this.authUrl = this.configService.getOrThrow<string>('AUTH_SERVICE_URL');
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async register(dto: RegisterDto) {
+    const res = await axios.post(`${this.authUrl}/register`, dto);
+    return res.data;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+  async login(dto: LoginDto) {
+    const res = await axios.post(`${this.authUrl}/login`, dto);
+    return res.data;
   }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async validate(token: string) {
+    const res = await axios.post(`${this.authUrl}/validate`, { token });
+    return res.data;
   }
 }

@@ -1,26 +1,50 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../users/user.entity';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  async register(dto: RegisterDto) {
+    const exists = await this.usersRepo.findOne({ where: { email: dto.email } });
+    if (exists) throw new ConflictException('User already exists');
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    const user = this.usersRepo.create({ email: dto.email, passwordHash });
+    await this.usersRepo.save(user);
+
+    const token = this.jwtService.sign({ userId: user.id, email: user.email });
+    return { token };
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async login(dto: LoginDto) {
+    const user = await this.usersRepo.findOne({ where: { email: dto.email } });
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    const valid = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!valid) throw new UnauthorizedException('Invalid credentials');
+
+    const token = this.jwtService.sign({ userId: user.id, email: user.email });
+    return { token };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async validate(token: string) {
+    try {
+      const payload = this.jwtService.verify(token);
+      return { userId: payload.userId, email: payload.email };
+    } catch (err) {
+      throw new UnauthorizedException('Invalid token');
+    }
   }
 }
+
