@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import axios from 'axios';
 
 @Injectable()
 export class AuthClient {
@@ -15,17 +15,17 @@ export class AuthClient {
   }
 
   async register(dto: RegisterDto) {
-    const response$ = this.http.post(`${this.authUrl}/register`, dto);
-    return firstValueFrom(response$).then(res => res.data);
+    const res = await axios.post(`${this.authUrl}/register`, dto);
+    return res.data;
   }
 
   async login(dto: LoginDto) {
-    const response$ = this.http.post(`${this.authUrl}/login`, dto);
-    return firstValueFrom(response$).then(res => res.data);
+    const res = await axios.post(`${this.authUrl}/login`, dto);
+    return res.data;
   }
 
   async validate(token: string) {
-    const response$ = this.http.post(`${this.authUrl}/validate`, { token });
-    return firstValueFrom(response$).then(res => res.data);
+    const res = await axios.post(`${this.authUrl}/validate`, { token });
+    return res.data;
   }
 }
