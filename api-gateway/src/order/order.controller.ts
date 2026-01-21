@@ -1,34 +1,35 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { OrderService } from './order.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
+import { Controller, Get, Post,Param, UseGuards, Req, HttpException, HttpStatus } from '@nestjs/common';
+import { OrderClient } from './order.service';
+import { JwtGuard } from 'src/guards/jwt.guard';
+import { OrderIdParamDto } from './dto/get-order-id.dto';
 
-@Controller('order')
+@Controller('orders')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(private readonly orderClient: OrderClient) {}
 
   @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.orderService.create(createOrderDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.orderService.findAll();
-  }
+  @UseGuards(JwtGuard)
+  async create(@Req() req) {
+    try {
+      return await this.orderClient.create(req.user.userId);
+    } catch (err: any) {
+      if (err.response?.data) {
+        throw new HttpException(err.response.data, err.response.status);
+      }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  };
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.orderService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.orderService.update(+id, updateOrderDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.orderService.remove(+id);
+  async get(@Param() params: OrderIdParamDto) {
+    try {
+      return this.orderClient.findById(params.id);
+    } catch (err: any) {
+    if (err.response?.data) {
+      throw new HttpException(err.response.data, err.response.status);
+      }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }  
   }
 }
+

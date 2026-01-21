@@ -1,26 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
 
 @Injectable()
-export class PaymentService {
-  create(createPaymentDto: CreatePaymentDto) {
-    return 'This action adds a new payment';
+export class PaymentClient {
+  private readonly paymentUrl: string;
+  private readonly apiKey: string;
+  constructor(private readonly configService: ConfigService) {
+    this.paymentUrl = this.configService.getOrThrow<string>('PAYMENT_SERVICE_URL');
+    this.apiKey = this.configService.getOrThrow<string>('API_GATEWAY_SECRET');
   }
 
-  findAll() {
-    return `This action returns all payment`;
+  async create(orderId: string) {
+    const res = await axios.post(`${this.paymentUrl}/payments`,{ orderId });
+    return res.data;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} payment`;
-  }
-
-  update(id: number, updatePaymentDto: UpdatePaymentDto) {
-    return `This action updates a #${id} payment`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} payment`;
+  async markPaid(paymentId: string) {
+    const res = await axios.patch(`${this.paymentUrl}/internal/payments/${paymentId}/paid`,null,{
+        headers: { 'x-api-key': this.apiKey },
+      });
+    return res.data;
   }
 }
+
