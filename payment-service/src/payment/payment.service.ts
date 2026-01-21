@@ -1,26 +1,63 @@
-import { Injectable } from '@nestjs/common';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Payment } from 'src/payments/payment.entity';
+import { Repository } from 'typeorm';
+import { OrderClient } from './clients/order.client';
+import { StripeMockService } from './stripe/stripe.mock.service';
 
 @Injectable()
 export class PaymentService {
-  create(createPaymentDto: CreatePaymentDto) {
-    return 'This action adds a new payment';
+  constructor(
+    @InjectRepository(Payment) 
+    private readonly paymentRepo: Repository<Payment>,
+    private readonly orderClient: OrderClient,
+    private readonly stripeMock: StripeMockService,
+  ) {}
+
+  async create(orderId: string) {
+    const order = await this.orderClient.findById(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    //создаём payment (amount берём из order)
+    const payment = this.paymentRepo.create({
+      orderId,
+      amount: order.total,
+      status: 'PENDING',
+    });
+
+    const savedPayment = await this.paymentRepo.save(payment);
+
+    //создаём Stripe Checkout (mock)
+    const paymentUrl = await this.stripeMock.createCheckoutSession(
+      savedPayment.id,
+    );
+
+    //отдаём фронту URL
+    return {
+      paymentId: savedPayment.id,
+      paymentUrl,
+    };
   }
 
-  findAll() {
-    return `This action returns all payment`;
-  }
+  async markPaid(paymentId: string) {
+    const payment = await this.paymentRepo.findOne({
+      where: { id: paymentId },
+    });
 
-  findOne(id: number) {
-    return `This action returns a #${id} payment`;
-  }
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
+    }
 
-  update(id: number, updatePaymentDto: UpdatePaymentDto) {
-    return `This action updates a #${id} payment`;
-  }
+    payment.status = 'PAID';
+    await this.paymentRepo.save(payment);
 
-  remove(id: number) {
-    return `This action removes a #${id} payment`;
+    // уведомляем OrderService
+    await this.orderClient.markPaid(payment.orderId);
+
+    return payment;
   }
 }
+

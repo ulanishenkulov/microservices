@@ -1,26 +1,37 @@
-import { Injectable } from '@nestjs/common';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Order } from '../orders/order.entity';
 
 @Injectable()
 export class OrderService {
-  create(createOrderDto: CreateOrderDto) {
-    return 'This action adds a new order';
+  constructor(
+    @InjectRepository(Order) private readonly ordersRepo: Repository<Order>,
+  ) {}
+
+  async create(userId: string) {
+    const total = this.generateRandomTotal();
+    const order = this.ordersRepo.create({ userId, total });
+    return this.ordersRepo.save(order);
   }
 
-  findAll() {
-    return `This action returns all order`;
+  async markPaid(id: string) {
+    const order = await this.ordersRepo.findOne({ where: { id } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    order.status = 'PAID';
+    return this.ordersRepo.save(order);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} order`;
+
+  async findById(id: string) {
+    const order = await this.ordersRepo.findOne({ where: { id } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    return order;
   }
 
-  update(id: number, updateOrderDto: UpdateOrderDto) {
-    return `This action updates a #${id} order`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} order`;
-  }
+  private generateRandomTotal(): number {
+  return Math.floor(Math.random() * (1000 - 50 + 1)) + 50;  // просто сгенерировал total так, как будто мы считаем в backend на основании продуктов и его количества
+}
 }
