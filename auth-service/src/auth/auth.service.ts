@@ -6,12 +6,15 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { KafkaProducerService } from 'src/kafka/kafka-producer.service';
+import { UserRegisteredEvent } from 'src/events/user-registered.event';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     private readonly jwtService: JwtService,
+    private readonly kafkaProducer: KafkaProducerService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -22,6 +25,16 @@ export class AuthService {
 
     const user = this.usersRepo.create({ email: dto.email, passwordHash });
     await this.usersRepo.save(user);
+
+    const event: UserRegisteredEvent = {
+    userId: user.id,
+    email: user.email,
+  };
+
+    //отправляем событие в Kafka (не блокируем регистрацию)
+    this.kafkaProducer.emitUserCreated(event).catch((err) => {
+    console.error('Kafka emit error (users.registered):', err);
+    });
 
     const token = this.jwtService.sign({ userId: user.id, email: user.email });
     return { token };

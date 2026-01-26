@@ -10,8 +10,7 @@ export class AuthController {
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     try {
-      const user = await this.authClient.register(dto);
-      // send to kafka (user) to topic user.created
+      return await this.authClient.register(dto);
     } catch (err: any) {
       if (err.response?.data) {
         throw new HttpException(err.response.data, err.response.status);
