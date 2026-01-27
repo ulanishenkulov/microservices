@@ -1,14 +1,18 @@
 import { Controller, Get, Post,Param, UseGuards, Req, HttpException, HttpStatus, Body } from '@nestjs/common';
 import { PaymentClient } from './payment.service';
-import { JwtGuard } from 'src/guards/jwt.guard';
+import { JwtAuthGuard } from 'src/guards/jwt.guard';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { Roles } from 'src/decorators/roles.decorator';
+import { UserRole } from 'src/enums/user-role.enum';
+import { RolesGuard } from 'src/guards/roles.guard';
 
 @Controller('payments')
 export class PaymentController {
   constructor(private readonly paymentClient: PaymentClient) {}
 
   @Post()
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER)
   async create(@Body() dto: CreatePaymentDto) {
     try {
       return await this.paymentClient.create(dto.orderId);

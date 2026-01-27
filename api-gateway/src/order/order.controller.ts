@@ -1,14 +1,18 @@
 import { Controller, Get, Post,Param, UseGuards, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { OrderClient } from './order.service';
-import { JwtGuard } from 'src/guards/jwt.guard';
+import { JwtAuthGuard } from 'src/guards/jwt.guard';
 import { OrderIdParamDto } from './dto/get-order-id.dto';
+import { Roles } from 'src/decorators/roles.decorator';
+import { UserRole } from 'src/enums/user-role.enum';
+import { RolesGuard } from 'src/guards/roles.guard';
 
 @Controller('orders')
 export class OrderController {
   constructor(private readonly orderClient: OrderClient) {}
 
   @Post()
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtAuthGuard,RolesGuard)
+  @Roles(UserRole.USER)
   async create(@Req() req) {
     try {
       return await this.orderClient.create(req.user.userId);

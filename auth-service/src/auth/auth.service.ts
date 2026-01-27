@@ -23,7 +23,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
-    const user = this.usersRepo.create({ email: dto.email, passwordHash });
+    const user = this.usersRepo.create({ email: dto.email, passwordHash, role: dto.role });
     await this.usersRepo.save(user);
 
     const event: UserRegisteredEvent = {
@@ -36,7 +36,7 @@ export class AuthService {
     console.error('Kafka emit error (users.registered):', err);
     });
 
-    const token = this.jwtService.sign({ userId: user.id, email: user.email });
+    const token = this.jwtService.sign({ userId: user.id, email: user.email, role: user.role });
     return { token };
   }
 
@@ -47,14 +47,14 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    const token = this.jwtService.sign({ userId: user.id, email: user.email });
+    const token = this.jwtService.sign({ userId: user.id, email: user.email,role: user.role });
     return { token };
   }
 
   async validate(token: string) {
     try {
       const payload = this.jwtService.verify(token);
-      return { userId: payload.userId, email: payload.email };
+      return { userId: payload.userId, email: payload.email,role: payload.role };
     } catch (err) {
       throw new UnauthorizedException('Invalid token');
     }
