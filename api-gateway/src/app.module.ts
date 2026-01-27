@@ -9,9 +9,11 @@ import { OrderClient } from './order/order.service';
 import { PaymentController } from './payment/payment.controller';
 import { PaymentClient } from './payment/payment.service';
 import { StripeWebhookController } from './webhooks/stripe-webhook.controller';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
+    KafkaModule,
     HttpModule,
     ConfigModule.forRoot({
       isGlobal: true

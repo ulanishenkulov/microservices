@@ -17,12 +17,14 @@ export class OrderService {
 
   async markPaid(id: string) {
     const order = await this.ordersRepo.findOne({ where: { id } });
-    if (!order) throw new NotFoundException('Order not found');
-
+    if (!order) {
+      console.warn(`Order ${id} not found`);
+      return;
+    }
     order.status = 'PAID';
-    return this.ordersRepo.save(order);
+    await this.ordersRepo.save(order);
+    console.log(`Order ${id} marked as PAID`);
   }
-
 
   async findById(id: string) {
     const order = await this.ordersRepo.findOne({ where: { id } });
