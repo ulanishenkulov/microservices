@@ -11,6 +11,8 @@ import { PaymentClient } from './payment/payment.service';
 import { StripeWebhookController } from './webhooks/stripe-webhook.controller';
 import { KafkaModule } from './kafka/kafka.module';
 import { RolesGuard } from './guards/roles.guard';
+import { UserClient } from './user/user.service';
+import { UserController } from './user/user.controller';
 
 @Module({
   imports: [
@@ -20,8 +22,8 @@ import { RolesGuard } from './guards/roles.guard';
       isGlobal: true
     }),
   ],
-  controllers: [AuthController,OrderController,PaymentController,StripeWebhookController],
-  providers: [AuthClient, OrderClient, JwtAuthGuard,PaymentClient, RolesGuard],
+  controllers: [AuthController,OrderController,PaymentController,StripeWebhookController, UserController],
+  providers: [AuthClient, OrderClient,UserClient, JwtAuthGuard,PaymentClient, RolesGuard],
 })
 export class ApiGatewayModule {}
 
