@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { CreateOrderPayloadDto } from './dto/create-order-payload.dto';
 
 @Injectable()
 export class OrderClient {
@@ -12,8 +13,8 @@ export class OrderClient {
     this.orderUrl = this.configService.getOrThrow<string>('ORDER_SERVICE_URL');
   }
 
-  async create(userId: string) {
-    const res = await axios.post(this.orderUrl,{ userId });
+  async create(orderPayload: CreateOrderPayloadDto) {
+    const res = await axios.post(this.orderUrl, orderPayload);
     return res.data;
   }
 
@@ -21,5 +22,9 @@ export class OrderClient {
     const res = await axios.get(`${this.orderUrl}/${orderId}`);
     return res.data;
   }
-}
 
+    async markPaid(orderId: string) {
+    const res = await axios.patch(`${this.orderUrl}/${orderId}/paid`);
+    return res.data;
+  }
+}

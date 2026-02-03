@@ -1,16 +1,19 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { StripeReceivedEvent } from 'src/events/stripe-received.event';
+import { OrderCreatedEvent } from 'src/events/order-created.event';
+import { GetPaymentsDto } from './dto/get-payments.dto';
+import { PaymentType } from 'src/payments/enums/payment.enums';
+import { UserBalanceReservedEvent } from 'src/events/user-balance-reserved.event';
 
 @Controller('payments')
 export class PaymentController {
   constructor(private readonly service: PaymentService) {}
 
-  @Post('')
-  create(@Body() dto: CreatePaymentDto) {
-    return this.service.create(dto.orderId);
+  @Get('')
+  getAll(@Query() query: GetPaymentsDto) {
+    console.log(query)
+    return this.service.getAll(query);
   }
 }
 
@@ -19,10 +22,24 @@ export class PaymentController {
 export class PaymentKafkaController {
   constructor(private readonly service: PaymentService) {}
 
-  @EventPattern('payments.stripe.webhook.received')
-  async handlePaymentCompleted(@Payload() payload: StripeReceivedEvent) {
-    console.log(`принял paymentId для update ${payload.paymentId}`)
-    await this.service.markPaid(payload.paymentId);
+  @EventPattern('orders.created')
+  async handleOrderCreated(@Payload() payload: OrderCreatedEvent) {
+    if (payload.type !== PaymentType.TOPUP) {
+      console.log(`event не TOPUP, event type = ${payload.type} , ничего не сделаем`)
+      return;
+    }
+    console.log(`принял order c id = ${payload.orderId} и type = ${payload.type} для создания payment`);
+    await this.service.createPaymentOrderEvent(payload);
+  }
+
+  @EventPattern('balance.reserved')
+  async handleuserBalanceReserved(@Payload() payload: UserBalanceReservedEvent) {
+    if (payload.type === PaymentType.TOPUP) {
+      console.log(`event TOPUP, event type = ${payload.type} , ничего не делаем`)
+      return;
+    }
+    console.log(`принял order c id = ${payload.orderId} и type = ${payload.type} для создания payment`);
+    await this.service.createPaymentUserbalanceReservedEvent(payload);
   }
 }
 
