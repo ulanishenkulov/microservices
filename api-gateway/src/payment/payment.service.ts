@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { StripeReceivedEvent } from 'src/events/stripe-recevied.event';
 import { KafkaProducerService } from 'src/kafka/kafka-producer.service';
+import { UpdatePaymentDto } from 'src/webhooks/dto/update-payment.dto';
 
 @Injectable()
 export class PaymentClient {
@@ -20,14 +21,10 @@ export class PaymentClient {
     return res.data;
   }
 
-  async markPaid(paymentId: string) {
-    const event: StripeReceivedEvent = {
-      paymentId
-    };
-    console.log(`try to emit ${paymentId} in webhooks route`)
-    //отправляем событие в Kafka
-    this.kafkaProducer.emitStripeWebhookReceived(event).catch((err) => {
-    console.error('Kafka emit error (payments.stripe.webhook.received):', err);
+  async markPaid(updatePaymentDto: UpdatePaymentDto) {
+    await axios.patch(`${this.paymentUrl}/internal/payments/${updatePaymentDto.paymentId}/paid`,
+      { type: updatePaymentDto.type }, 
+      { headers: {'x-api-key': this.apiKey}
     });
   }
 }

@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { PaymentStatus, PaymentType } from './enums/payment.enums';
 
 @Entity('payments')
 export class Payment {
@@ -8,18 +9,30 @@ export class Payment {
   @Column()
   orderId: string;
 
-  @Column('int')
+  @Column()
+  userId: string;
+
+  @Column('decimal', { precision: 10, scale: 2 })
   amount: number;
 
   @Column({
     type: 'enum',
-    enum: ['PENDING', 'PAID', 'FAILED'],
-    default: 'PENDING',
+    enum: PaymentStatus,
   })
-  status: 'PENDING' | 'PAID' | 'FAILED';
+  status: PaymentStatus;
+
+  @Column({ type: 'enum', enum: PaymentType })
+  type: PaymentType;
+
+  @Column({ nullable: true })
+  paymentUrl?: string;
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
+
 
 

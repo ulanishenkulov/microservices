@@ -1,6 +1,8 @@
-import { Controller, ForbiddenException, Headers, Param, Patch } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Headers, Param, Patch } from "@nestjs/common";
 import { PaymentService } from "./payment.service";
 import { ConfigService } from "@nestjs/config";
+import { MarkPaidDto } from "./dto/mark-paid-payment.dto";
+import { markPaidTypeForService } from "./types/mark-paid-payment.type";
 
 @Controller('internal/payments')
 export class PaymentInternalController {
@@ -12,11 +14,16 @@ export class PaymentInternalController {
   @Patch(':id/paid')
   markPaid(
     @Param('id') id: string,
-    @Headers('x-api-key') apiKey: string
+    @Headers('x-api-key') apiKey: string,
+    @Body() markPaidDtoDto: MarkPaidDto
 ) {
      if (apiKey !== this.configService.getOrThrow<string>('API_GATEWAY_SECRET')) {
       throw new ForbiddenException('Forbidden');
     }
-    return this.service.markPaid(id);
+    const payload: markPaidTypeForService = {
+      id,
+      type: markPaidDtoDto.type
+    }
+    return this.service.markPaid(payload);
   }
 };

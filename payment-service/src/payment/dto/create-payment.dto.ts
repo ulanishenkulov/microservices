@@ -1,7 +1,15 @@
-import { IsNotEmpty, IsUUID } from "class-validator";
+import { IsNotEmpty, IsOptional, IsPositive, IsUUID } from "class-validator";
 
 export class CreatePaymentDto {
-@IsNotEmpty()
   @IsUUID()
+  @IsNotEmpty()
+  userId: string;
+
+  @IsUUID()
+  @IsNotEmpty()
   orderId: string;
+
+  @IsOptional()
+  @IsPositive()
+  amount: number;
 }

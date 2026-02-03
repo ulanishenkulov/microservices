@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { UsersService } from './user.service';
-import { UsersController } from './user.controller';
+import { UsersController,UserKafkaController } from './user.controller';
 import { UsersModule } from 'src/users/users.module';
+import { KafkaModule } from 'src/kafka/kafka.module';
 
 @Module({
-  controllers: [UsersController],
+  controllers: [UsersController,UserKafkaController],
   providers: [UsersService],
-  imports: [UsersModule]
+  imports: [UsersModule,KafkaModule]
 })
 export class UserModule {}

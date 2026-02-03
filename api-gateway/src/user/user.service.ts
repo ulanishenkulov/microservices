@@ -23,4 +23,9 @@ export class UserClient {
     const res = await axios.delete(`${this.userUrl}/${id}`);
     return res.data;
   }
+
+    async topUp(dto: {userId: string, amount: number}) {
+    const res = await axios.patch(`${this.userUrl}/${dto.userId}`,dto);
+    return res.data;
+  }
 }

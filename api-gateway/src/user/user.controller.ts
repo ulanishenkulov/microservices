@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Get, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, Get, Param, Delete, UseGuards, Patch } from '@nestjs/common';
 import { UserClient } from './user.service';
 import { UserIdParamDto } from './dto/get-user-id.dto';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
@@ -45,6 +45,18 @@ export class UserController {
         return {
           message: `user with ${dto.id} is deleted`
         }
+      } catch (err: any) {
+        if (err.response?.data) {
+          throw new HttpException(err.response.data, err.response.status);
+        }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Patch('/:id')
+    async topUser(@Param() dto: {userId: string, amount: number}) {
+      try {
+        return await this.userClient.topUp(dto);
       } catch (err: any) {
         if (err.response?.data) {
           throw new HttpException(err.response.data, err.response.status);

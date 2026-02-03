@@ -1,9 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
-
-export enum UserRole {
-  USER = 'user',
-  ADMIN = 'admin',
-}
+import { UserRole } from './enums/user.enums';
 
 @Entity('users')
 export class User {
@@ -19,6 +15,9 @@ export class User {
     default: UserRole.USER,
   })
   role: UserRole;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  balance: number;
 
   @Column()
   passwordHash: string;

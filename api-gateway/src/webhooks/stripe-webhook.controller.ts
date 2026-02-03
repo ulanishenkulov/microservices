@@ -9,9 +9,9 @@ export class StripeWebhookController {
   ) {}
 
   @Post()
-  async handle(@Body() body: UpdatePaymentDto) {
+  async handle(@Body() updatePaymentDto: UpdatePaymentDto) {
     try {
-         await this.paymentClient.markPaid(body.paymentId);
+        await this.paymentClient.markPaid(updatePaymentDto);
          return { received: true };
         } catch (err: any) {
           if (err.response?.data) {
