@@ -1,54 +1,94 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Payment } from 'src/payments/payment.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { OrderClient } from './clients/order.client';
 import { StripeMockService } from './stripe/stripe.mock.service';
 import { v4 as uuidv4 } from 'uuid';
-// import { ProcessedStripeEvent } from 'src/payments/processed-stripe-event.entity';
 import { KafkaProducerService } from 'src/kafka/kafka-producer.service';
 import { PaymentsCompletedEvent } from 'src/events/payments-completed.event';
-import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentStatus } from 'src/payments/enums/payment.enums';
 import { OrderCreatedEvent } from 'src/events/order-created.event';
-import { query } from 'express';
 import { GetPaymentsDto } from './dto/get-payments.dto';
-import { MarkPaidDto } from './dto/mark-paid-payment.dto';
 import { markPaidTypeForService } from './types/mark-paid-payment.type';
 import { UserBalanceReservedEvent } from 'src/events/user-balance-reserved.event';
+import { ProcessedEvent } from 'src/payments/processed-event.entity';
 
 @Injectable()
 export class PaymentService {
   constructor(
     @InjectRepository(Payment)
     private readonly paymentRepo: Repository<Payment>,
-    // @InjectRepository(ProcessedStripeEvent)
-    // private readonly processedStripeEventRepo: Repository<ProcessedStripeEvent>,
+    @InjectRepository(ProcessedEvent)
+    private readonly processedEventRepo: Repository<ProcessedEvent>,
     private readonly orderClient: OrderClient,
     private readonly stripeMock: StripeMockService,
     private readonly kafkaProducer: KafkaProducerService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createPaymentOrderEvent(orderCreatedEvent: OrderCreatedEvent) {
-    const { orderId, userId, price, type } = orderCreatedEvent;
-
-    const payment = this.paymentRepo.create({
+    const {
       orderId,
-      userId, 
-      amount: price,
-      status: PaymentStatus.PENDING,
-      type
-    });
+      userId,
+      price,
+      type,
+      eventId,
+    } = orderCreatedEvent;
 
-    const savedPayment = await this.paymentRepo.save(payment);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    //создаём Stripe Checkout (mock)
-    const paymentUrl = await this.stripeMock.createCheckoutSession(
-      savedPayment.id,
-    );
+    try {
+      // 1️⃣ идемпотентность
+      const existing = await queryRunner.manager.findOne(ProcessedEvent, {
+        where: { eventId },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-    savedPayment.paymentUrl = paymentUrl;
-    await this.paymentRepo.save(savedPayment);
+      if (existing) {
+        await queryRunner.rollbackTransaction();
+        return;
+      }
+
+      // 2️⃣ создаём payment
+      const payment = queryRunner.manager.create(Payment, {
+        orderId,
+        userId,
+        amount: price,
+        status: PaymentStatus.PENDING,
+        type,
+      });
+
+      const savedPayment = await queryRunner.manager.save(payment);
+
+      // 3️⃣ сохраняем processed_event
+      const processedEvent = queryRunner.manager.create(ProcessedEvent, {
+        eventId,
+        eventType: type,
+        processedAt: new Date(),
+      });
+
+      await queryRunner.manager.save(processedEvent);
+
+      // 4️⃣ коммит
+      await queryRunner.commitTransaction();
+
+      // 5️⃣ ВНЕ транзакции: Stripe
+      const paymentUrl = await this.stripeMock.createCheckoutSession(
+        savedPayment.id,
+      );
+
+      await this.paymentRepo.update(savedPayment.id, {
+        paymentUrl,
+      });
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async createPaymentUserbalanceReservedEvent(userBalanceReservedEvent: UserBalanceReservedEvent) {

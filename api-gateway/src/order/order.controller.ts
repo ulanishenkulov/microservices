@@ -1,4 +1,4 @@
-import { Controller, Get, Post,Param, UseGuards, Req, HttpException, HttpStatus, Body, Patch } from '@nestjs/common';
+import { Controller, Get, Post,Param, UseGuards, Req, HttpException, HttpStatus, Body, Patch, Headers, BadRequestException } from '@nestjs/common';
 import { OrderClient } from './order.service';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
 import { OrderIdParamDto } from './dto/get-order-id.dto';
@@ -15,20 +15,16 @@ export class OrderController {
   @Post()
   @UseGuards(JwtAuthGuard,RolesGuard)
   @Roles(UserRole.USER)
-  async create(@Req() req, @Body() createOrderDto: CreateOrderDto) {
-    try {
+  async create(@Req() req,@Headers('idempotency-key') key: string, @Body() createOrderDto: CreateOrderDto) {
+      if (!key) {
+        throw new BadRequestException('Idempotency-Key required');
+      }
       const payload: CreateOrderPayloadDto = {
         ...createOrderDto,
-        userId: req.user.userId
+        userId: req.user.userId,
       };
-      return await this.orderClient.create(payload);
-    } catch (err: any) {
-      if (err.response?.data) {
-        throw new HttpException(err.response.data, err.response.status);
-      }
-      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  };
+      return await this.orderClient.create(payload,key);
+    } 
 
   @Get(':id')
   async get(@Param() params: OrderIdParamDto) {

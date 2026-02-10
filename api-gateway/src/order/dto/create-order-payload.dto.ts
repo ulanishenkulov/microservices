@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsPositive, IsUUID, Min } from "class-validator";
+import { IsEnum, IsInt, IsOptional, IsPositive, IsUUID, Min,IsNotEmpty } from "class-validator";
 import { OrderType } from "../enums/order.enums";
 
 export class CreateOrderPayloadDto {

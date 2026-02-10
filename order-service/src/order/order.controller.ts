@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Headers, BadRequestException } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { UserBalanceUpdatedEvent } from 'src/events/user-balance-updated.event';
 import { InsufficientEvent } from 'src/events/user.insufficient.event';
+import { strict } from 'yargs';
 
 //api
 @Controller('orders')
@@ -11,8 +12,11 @@ export class OrderController {
   constructor(private readonly service: OrderService) {}
 
   @Post()
-  create(@Body() dto: CreateOrderDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateOrderDto,@Headers('idempotency-key') key: string,) {
+    if (!key) {
+      throw new BadRequestException('Idempotency-Key required');
+  }
+    return this.service.create(dto,key);
   }
 
   @Patch(':id/paid')
