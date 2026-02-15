@@ -1,5 +1,6 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
+import { OrderCreatedEvent } from 'src/events/order-created.event';
 import { PaymentsCompletedEvent } from 'src/events/payments-completed.event';
 
 @Injectable()
@@ -12,5 +13,15 @@ export class KafkaProducerService implements OnModuleInit {
 
   async emitPaymentCompleted(payload: PaymentsCompletedEvent) {
     return this.kafka.emit('payments.completed', payload);
+  }
+
+  async emitOrderCreated(
+    payload: OrderCreatedEvent,
+    options?: { headers?: Record<string, string> },
+  ) {
+    return this.kafka.emit('orders.created', {
+      value: payload,
+      headers: options?.headers,
+    });
   }
 }

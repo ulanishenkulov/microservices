@@ -10,7 +10,13 @@ export class KafkaProducerService implements OnModuleInit {
     await this.kafka.connect();
   }
 
-  async emitOrderCreated(payload: OrderCreatedEvent) {
-    return this.kafka.emit('orders.created', payload);
+  async emitOrderCreated(
+    payload: OrderCreatedEvent,
+    options?: { headers?: Record<string, string> },
+  ) {
+    return this.kafka.emit('orders.created', {
+      value: payload,
+      headers: options?.headers,
+    });
   }
 }

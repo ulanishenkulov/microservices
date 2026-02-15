@@ -12,11 +12,11 @@ export class OrderController {
   constructor(private readonly service: OrderService) {}
 
   @Post()
-  create(@Body() dto: CreateOrderDto,@Headers('idempotency-key') key: string,) {
+  create(@Body() dto: CreateOrderDto,@Headers('idempotency-key') key: string,@Headers('x-request-id') requestId: string) {
     if (!key) {
       throw new BadRequestException('Idempotency-Key required');
   }
-    return this.service.create(dto,key);
+    return this.service.create(dto,key,requestId);
   }
 
   @Patch(':id/paid')

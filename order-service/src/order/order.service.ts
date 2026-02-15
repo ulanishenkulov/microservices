@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Headers, Injectable, NotFoundException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -21,6 +21,7 @@ export class OrderService {
   async create(
     createOrderDto: CreateOrderDto,
     key: string,
+    requestId: string
   ): Promise<Order | ProcessedEvent> {
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -87,7 +88,8 @@ export class OrderService {
         timestamp: new Date().toISOString(),
       };
 
-      this.kafkaProducer.emitOrderCreated(event).catch((err) => {
+      console.log(`создал заказ с id = ${order.id} и отправляю event = orders.created c requestId = ${requestId}`)
+      this.kafkaProducer.emitOrderCreated(event,{ headers: {'retry-count': '0','x-request-id': requestId} }).catch((err) => {
         console.error('Kafka emit error (orders.created):', err);
       });
 
