@@ -1,53 +1,91 @@
-import { Controller, Get, Post,Param, UseGuards, Req, HttpException, HttpStatus, Body, Patch, Headers, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  UseGuards,
+  Req,
+  Body,
+  Patch,
+  Headers,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
+
 import { OrderClient } from './order.service';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
-import { OrderIdParamDto } from './dto/get-order-id.dto';
+import { RolesGuard } from 'src/guards/roles.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { UserRole } from 'src/enums/user-role.enum';
-import { RolesGuard } from 'src/guards/roles.guard';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { CreateOrderPayloadDto } from './dto/create-order-payload.dto';
 
+import { OrderIdParamDto } from './dto/get-order-id.dto';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { OrderResponseDto } from './dto/order.response.dto';
+
+@ApiTags('Orders')
 @Controller('orders')
 export class OrderController {
   constructor(private readonly orderClient: OrderClient) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard,RolesGuard)
+  @ApiOperation({ summary: 'Create order' })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 201,
+    description: 'Order created',
+    type: OrderResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER)
-  async create(@Req() req,@Headers('idempotency-key') key: string, @Body() createOrderDto: CreateOrderDto) {
-      if (!key) {
-        throw new BadRequestException('Idempotency-Key required');
-      }
-      const payload: CreateOrderPayloadDto = {
+  async create(
+    @Req() req,
+    @Headers('idempotency-key') key: string,
+    @Headers('x-request-id') requestId: string,
+    @Body() createOrderDto: CreateOrderDto,
+  ) {
+    if (!key) {
+      throw new BadRequestException('Idempotency-Key required');
+    }
+
+    return this.orderClient.create(
+      {
         ...createOrderDto,
         userId: req.user.userId,
-      };
-      return await this.orderClient.create(payload,key);
-    } 
+      },
+      key,
+      requestId
+    );
+  }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get order by id' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order found',
+    type: OrderResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Order not found' })
   async get(@Param() params: OrderIdParamDto) {
-    try {
-      return this.orderClient.findById(params.id);
-    } catch (err: any) {
-    if (err.response?.data) {
-      throw new HttpException(err.response.data, err.response.status);
-      }
-      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
-    }  
+    return this.orderClient.findById(params.id);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Mark order as paid' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order marked as paid',
+    type: OrderResponseDto,
+  })
   async markPaid(@Param() params: OrderIdParamDto) {
-    try {
-      return this.orderClient.markPaid(params.id);
-    } catch (err: any) {
-    if (err.response?.data) {
-      throw new HttpException(err.response.data, err.response.status);
-      }
-      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
-    }  
+    return this.orderClient.markPaid(params.id);
   }
 }
-

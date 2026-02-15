@@ -13,11 +13,16 @@ export class OrderClient {
     this.orderUrl = this.configService.getOrThrow<string>('ORDER_SERVICE_URL');
   }
 
-  async create(orderPayload: CreateOrderPayloadDto,key:string) {
+  async create(orderPayload: CreateOrderPayloadDto,key:string, requestId:string) {
     const res = await axios.post(
       this.orderUrl, 
       orderPayload,
-      {headers: {'idempotency-key': key}}
+      {headers:
+         {
+          'idempotency-key': key,
+          'x-request-id': requestId,
+         },
+        },
     );
     return res.data;
   }
